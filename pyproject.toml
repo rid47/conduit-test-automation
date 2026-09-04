@@ -1,0 +1,24 @@
+[project]
+name = "playwright-conduit-tests"
+version = "0.1.0"
+description = "Playwright + Python E2E automation framework for the Conduit demo app (conduit.bondaracademy.com)"
+requires-python = ">=3.12"
+dependencies = [
+    "allure-pytest>=2.16.0",
+    "faker>=40.38.0",
+    "pytest>=9.1.1",
+    "pytest-playwright>=0.9.0",
+    "pytest-xdist>=3.8.0",
+    "python-dotenv>=1.2.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+    "--alluredir=reports/allure-results",
+    "--output=reports/test-results",
+    "--tracing=retain-on-failure",
+    "--screenshot=only-on-failure",
+    "--video=retain-on-failure",
+]

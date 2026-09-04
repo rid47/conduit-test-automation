@@ -1,0 +1,76 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Install Playwright browser (${{ matrix.browser }})
+        run: uv run playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run tests
+        run: uv run pytest --browser ${{ matrix.browser }} -n auto --alluredir=reports/allure-results/${{ matrix.browser }}
+
+      - name: Upload Playwright traces/screenshots/videos (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-${{ matrix.browser }}
+          path: reports/test-results
+          retention-days: 7
+
+      - name: Upload raw Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ matrix.browser }}
+          path: reports/allure-results/${{ matrix.browser }}
+          retention-days: 7
+
+  publish-report:
+    name: Publish Allure report
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all Allure results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          path: reports/allure-results
+          merge-multiple: true
+
+      - name: Generate Allure HTML report
+        uses: simple-elf/allure-report-action@v1.12
+        with:
+          allure_results: reports/allure-results
+          allure_report: reports/allure-report
+
+      - name: Upload Allure HTML report as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: reports/allure-report
+          retention-days: 30
